@@ -3,569 +3,522 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Anonymous P2P Mesh Chat</title>
+    <title>Mesh Chat v2.0 - Advanced</title>
     <!-- 
-        MIT License
-        Copyright (c) 2023 Anonymous P2P Chat
-
-        Permission is hereby granted, free of charge, to any person obtaining a copy
-        of this software and associated documentation files (the "Software"), to deal
-        in the Software without restriction, including without limitation the rights
-        to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-        copies of the Software, and to permit persons to whom the Software is
-        furnished to do so, subject to the following conditions:
-
-        The above copyright notice and this permission notice shall be included in all
-        copies or substantial portions of the Software.
-
-        THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-        IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-        FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-        AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-        LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-        OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-        SOFTWARE.
+        MIT License | Anonymous P2P Mesh Chat v2.0
+        Single File, No Server, No Database, No Tracking.
     -->
-
     <style>
-        /* --- CSS RESET & VARIABLES --- */
         :root {
-            --bg-color: #121212;
-            --container-bg: #1e1e1e;
-            --text-main: #e0e0e0;
-            --text-muted: #a0a0a0;
-            --accent: #00bcd4;
-            --accent-hover: #00acc1;
-            --msg-me: #005662;
-            --msg-peer: #2c2c2c;
-            --sys-msg: #ff9800;
-            --border: #333;
-            --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            --bg: #121212; --panel: #1e1e1e; --text: #e0e0e0; --muted: #a0a0a0;
+            --accent: #00e5ff; --accent-dim: #00acc1;
+            --me-bg: #006064; --peer-bg: #263238;
+            --sys-bg: #37474f; --danger: #ff5252;
+            --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, sans-serif;
+            --shadow: 0 4px 6px rgba(0,0,0,0.3);
         }
 
-        * { box-sizing: border-box; margin: 0; padding: 0; outline: none; }
+        body.light-mode {
+            --bg: #f0f2f5; --panel: #ffffff; --text: #1c1e21; --muted: #65676b;
+            --accent: #0084ff; --accent-dim: #006bcf;
+            --me-bg: #0084ff; --peer-bg: #e4e6eb;
+            --sys-bg: #e4e6eb; 
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; outline: none; -webkit-tap-highlight-color: transparent; }
         
-        body {
-            background-color: var(--bg-color);
-            color: var(--text-main);
-            font-family: var(--font-family);
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-        }
+        body { background: var(--bg); color: var(--text); font-family: var(--font); height: 100vh; display: flex; flex-direction: column; overflow: hidden; transition: background 0.3s; }
 
-        /* --- HEADER & STATUS --- */
+        /* HEADER */
         header {
-            background-color: var(--container-bg);
-            padding: 10px 15px;
-            border-bottom: 1px solid var(--border);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            height: 60px;
-            flex-shrink: 0;
+            background: var(--panel); padding: 0 15px; height: 60px;
+            display: flex; justify-content: space-between; align-items: center;
+            border-bottom: 1px solid rgba(128,128,128,0.2); flex-shrink: 0;
+            box-shadow: var(--shadow); z-index: 10;
         }
-
-        .room-info h1 { font-size: 1.1rem; font-weight: 600; }
-        .room-info span { font-size: 0.8rem; color: var(--text-muted); }
-        .status-badge {
-            font-size: 0.75rem;
-            padding: 4px 8px;
-            border-radius: 12px;
-            background: #333;
-            color: #fff;
-        }
-        .status-badge.online { background: #2e7d32; }
-        .status-badge.offline { background: #c62828; }
-
-        /* --- CHAT AREA --- */
-        #chat-container {
-            flex: 1;
-            overflow-y: auto;
-            padding: 15px;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            scroll-behavior: smooth;
-        }
-
-        .message-wrapper {
-            display: flex;
-            flex-direction: column;
-            max-width: 80%;
-        }
-
-        .message-wrapper.me { align-self: flex-end; align-items: flex-end; }
-        .message-wrapper.peer { align-self: flex-start; align-items: flex-start; }
-        .message-wrapper.system { align-self: center; max-width: 95%; align-items: center; }
-
-        .message-bubble {
-            padding: 10px 14px;
-            border-radius: 18px;
-            font-size: 0.95rem;
-            line-height: 1.4;
-            word-wrap: break-word;
-            position: relative;
-        }
-
-        .me .message-bubble { background-color: var(--msg-me); border-bottom-right-radius: 4px; }
-        .peer .message-bubble { background-color: var(--msg-peer); border-bottom-left-radius: 4px; }
+        .brand { font-weight: 800; font-size: 1.2rem; display: flex; align-items: center; gap: 8px; }
+        .brand span { color: var(--accent); }
+        .controls { display: flex; gap: 15px; align-items: center; }
         
-        .sender-name {
-            font-size: 0.7rem;
-            margin-bottom: 2px;
-            color: var(--text-muted);
-            margin-left: 8px;
-        }
-        .me .sender-name { display: none; } /* Hide my own name */
+        /* ICONS (SVG) */
+        .icon-btn { cursor: pointer; fill: var(--muted); width: 24px; height: 24px; transition: 0.2s; }
+        .icon-btn:hover { fill: var(--text); }
+        .icon-btn.active { fill: var(--accent); }
 
-        .system-msg {
-            background-color: transparent;
-            color: var(--text-muted);
-            font-size: 0.8rem;
-            text-align: center;
-            font-style: italic;
-            border: 1px solid var(--border);
-            padding: 4px 12px;
-            border-radius: 20px;
-        }
+        /* CHAT AREA */
+        #chat-view { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 12px; scroll-behavior: smooth; }
+        
+        .msg { display: flex; flex-direction: column; max-width: 85%; position: relative; animation: popIn 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        @keyframes popIn { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
+        
+        .msg.me { align-self: flex-end; align-items: flex-end; }
+        .msg.peer { align-self: flex-start; align-items: flex-start; }
+        .msg.sys { align-self: center; max-width: 90%; align-items: center; margin: 10px 0; }
 
-        .timestamp {
-            font-size: 0.65rem;
-            color: rgba(255,255,255,0.4);
-            margin-top: 4px;
-            text-align: right;
-        }
+        .bubble { padding: 10px 16px; border-radius: 18px; font-size: 0.95rem; line-height: 1.5; word-wrap: break-word; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
+        .me .bubble { background: var(--me-bg); color: #fff; border-bottom-right-radius: 4px; }
+        body.light-mode .me .bubble { color: #fff; } /* Ensure text is white in light mode for sender */
+        .peer .bubble { background: var(--peer-bg); color: var(--text); border-bottom-left-radius: 4px; }
+        
+        .sender { font-size: 0.75rem; color: var(--muted); margin-bottom: 4px; margin-left: 10px; cursor: pointer; }
+        .me .sender { display: none; }
+        
+        .sys-bubble { background: var(--sys-bg); color: var(--muted); padding: 4px 12px; border-radius: 50px; font-size: 0.8rem; font-style: italic; text-align: center; }
 
-        /* --- INPUT AREA --- */
-        #input-area {
-            background-color: var(--container-bg);
-            padding: 10px;
-            border-top: 1px solid var(--border);
-            display: flex;
-            gap: 10px;
-            flex-shrink: 0;
-        }
+        .meta { font-size: 0.65rem; opacity: 0.6; text-align: right; margin-top: 4px; }
 
-        #message-input {
-            flex: 1;
-            background: #2b2b2b;
-            border: 1px solid #333;
-            color: white;
-            padding: 12px;
-            border-radius: 24px;
-            font-size: 1rem;
-        }
+        /* IMAGES IN CHAT */
+        .chat-img { max-width: 100%; border-radius: 12px; margin-top: 5px; cursor: pointer; transition: transform 0.2s; }
+        .chat-img:hover { transform: scale(1.02); }
 
-        #message-input:focus { border-color: var(--accent); }
+        /* INPUT AREA */
+        #input-zone { background: var(--panel); padding: 10px 15px; display: flex; gap: 10px; align-items: center; border-top: 1px solid rgba(128,128,128,0.2); }
+        #file-btn { cursor: pointer; display: flex; align-items: center; }
+        #msg-input { flex: 1; background: rgba(128,128,128,0.1); border: none; padding: 12px 20px; border-radius: 25px; color: var(--text); font-size: 1rem; }
+        #msg-input:focus { box-shadow: 0 0 0 2px var(--accent); }
+        #send-btn { background: var(--accent); border: none; width: 45px; height: 45px; border-radius: 50%; color: #000; cursor: pointer; display: grid; place-items: center; transition: 0.2s; }
+        #send-btn:hover { background: var(--accent-dim); transform: scale(1.1); }
+        #send-btn:disabled { background: var(--muted); opacity: 0.3; cursor: not-allowed; }
 
-        #send-btn {
-            background-color: var(--accent);
-            color: #000;
-            border: none;
-            padding: 0 20px;
-            border-radius: 24px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
+        /* SETTINGS MODAL */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 100; display: none; align-items: center; justify-content: center; backdrop-filter: blur(3px); }
+        .modal { background: var(--panel); width: 90%; max-width: 400px; padding: 25px; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); border: 1px solid rgba(128,128,128,0.2); }
+        .modal h2 { margin-bottom: 20px; color: var(--accent); }
+        .setting-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid rgba(128,128,128,0.1); }
+        .setting-row label { font-size: 0.95rem; }
+        
+        /* TOGGLE SWITCH */
+        .switch { position: relative; display: inline-block; width: 40px; height: 24px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #555; transition: .4s; border-radius: 34px; }
+        .slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; }
+        input:checked + .slider { background-color: var(--accent); }
+        input:checked + .slider:before { transform: translateX(16px); }
 
-        #send-btn:hover { background-color: var(--accent-hover); }
-        #send-btn:disabled { background-color: #444; color: #888; cursor: not-allowed; }
+        /* UTILS */
+        .hidden { display: none !important; }
+        code { background: rgba(128,128,128,0.3); padding: 2px 5px; border-radius: 4px; font-family: monospace; font-size: 0.9em; }
+        .typing-indicator { position: absolute; bottom: 80px; left: 20px; background: rgba(0,0,0,0.6); padding: 5px 10px; border-radius: 10px; font-size: 0.7rem; color: #fff; pointer-events: none; opacity: 0; transition: opacity 0.3s; }
+        .typing-indicator.visible { opacity: 1; }
+        
+        /* CONNECTION DOT */
+        .status-dot { width: 10px; height: 10px; border-radius: 50%; background: #555; display: inline-block; margin-right: 5px; }
+        .status-dot.green { background: #00e676; box-shadow: 0 0 5px #00e676; }
+        .status-dot.orange { background: #ff9100; }
+        .status-dot.red { background: var(--danger); }
 
-        /* --- TYPING INDICATOR --- */
-        #typing-indicator {
-            position: absolute;
-            bottom: 70px;
-            left: 20px;
-            font-size: 0.75rem;
-            color: var(--accent);
-            background: rgba(0,0,0,0.6);
-            padding: 4px 8px;
-            border-radius: 4px;
-            display: none;
-            pointer-events: none;
-        }
-
-        /* --- MOBILE TWEAKS --- */
-        @media (max-width: 600px) {
-            .message-wrapper { max-width: 90%; }
-        }
     </style>
 </head>
 <body>
 
-    <header>
-        <div class="room-info">
-            <h1>Mesh Chat <span style="color:var(--accent);">v1.0</span></h1>
-            <span id="connection-count">Connecting...</span>
-        </div>
-        <div id="status-badge" class="status-badge offline">Offline</div>
-    </header>
+<!-- UI STRUCTURE -->
+<header>
+    <div class="brand">
+        <div id="conn-dot" class="status-dot red"></div>
+        <div>Mesh<span>Chat</span></div>
+    </div>
+    <div class="controls">
+        <div id="user-count" style="font-size:0.8rem; color:var(--muted)">0 Peers</div>
+        <svg class="icon-btn" onclick="toggleSettings()" viewBox="0 0 24 24"><path d="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.06-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61 l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41 h-3.84c-0.24,0-0.43,0.17-0.47,0.41L9.25,5.35C8.66,5.59,8.12,5.92,7.63,6.29L5.24,5.33c-0.22-0.08-0.47,0-0.59,0.22L2.74,8.87 C2.62,9.08,2.66,9.34,2.86,9.49l2.03,1.58C4.84,11.36,4.8,11.69,4.8,12s0.02,0.64,0.06,0.94l-2.03,1.58 c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.36,2.54 c0.05,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.43-0.17,0.47-0.41l0.36-2.54c0.59-0.24,1.13-0.56,1.62-0.94l2.39,0.96 c0.22,0.08,0.47,0,0.59-0.22l1.92-3.32c0.12-0.22,0.07-0.47-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6 s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z"/></svg>
+    </div>
+</header>
 
-    <div id="chat-container">
-        <!-- Messages inject here -->
-        <div class="message-wrapper system">
-            <div class="system-msg">Welcome to the anonymous mesh. You are <b id="my-username-display">...</b></div>
+<div id="chat-view">
+    <!-- Messages inject here -->
+    <div class="msg sys"><div class="sys-bubble">Connecting to anonymous global mesh...</div></div>
+</div>
+
+<div id="typing-notify" class="typing-indicator">Someone is typing...</div>
+
+<form id="input-zone" onsubmit="handleSend(event)">
+    <label id="file-btn" title="Send Image (Max 100KB)">
+        <input type="file" id="file-input" accept="image/*" class="hidden" onchange="handleFileSelect(this)">
+        <svg viewBox="0 0 24 24" class="icon-btn"><path d="M16.5,6v11.5c0,2.21-1.79,4-4,4s-4-1.79-4-4V5c0-1.38,1.12-2.5,2.5-2.5s2.5,1.12,2.5,2.5v10.5c0,0.55-0.45,1-1,1 s-1-0.45-1-1V6H10v9.5c0,1.38,1.12,2.5,2.5,2.5s2.5-1.12,2.5-2.5V5c0-2.21-1.79-4-4-4S7,2.79,7,5v12.5c0,3.04,2.46,5.5,5.5,5.5 s5.5-2.46,5.5-5.5V6H16.5z"/></svg>
+    </label>
+    <input type="text" id="msg-input" placeholder="Type a message..." autocomplete="off" disabled>
+    <button type="button" id="send-btn" onclick="handleSend(event)" disabled>
+        <svg viewBox="0 0 24 24" style="width:20px;height:20px;fill:currentcolor"><path d="M2.01,21L23,12L2.01,3L2,10l15,2l-15,2L2.01,21z"/></svg>
+    </button>
+</form>
+
+<!-- SETTINGS MODAL -->
+<div id="settings-modal" class="modal-overlay" onclick="if(event.target===this) toggleSettings()">
+    <div class="modal">
+        <h2>Settings</h2>
+        
+        <div class="setting-row">
+            <label>Username</label>
+            <input type="text" id="username-edit" style="background:#333; border:none; color:#fff; padding:5px; border-radius:4px; text-align:right; width:120px;" maxlength="12">
+        </div>
+
+        <div class="setting-row">
+            <label>Sound Notifications</label>
+            <label class="switch">
+                <input type="checkbox" id="sound-toggle" checked>
+                <span class="slider"></span>
+            </label>
+        </div>
+
+        <div class="setting-row">
+            <label>Light Mode</label>
+            <label class="switch">
+                <input type="checkbox" id="theme-toggle" onchange="document.body.classList.toggle('light-mode')">
+                <span class="slider"></span>
+            </label>
+        </div>
+        
+        <div style="margin-top:20px; text-align:right;">
+            <button onclick="saveSettings()" style="background:var(--accent); border:none; padding:8px 16px; border-radius:4px; cursor:pointer; font-weight:bold;">Done</button>
         </div>
     </div>
-
-    <div id="typing-indicator">Someone is typing...</div>
-
-    <form id="input-area" onsubmit="sendMessage(event)">
-        <input type="text" id="message-input" placeholder="Type a message..." autocomplete="off" disabled>
-        <button type="button" id="send-btn" onclick="sendMessage(event)" disabled>Send</button>
-    </form>
+</div>
 
 <script>
-    /**
-     * CONFIGURATION & CONSTANTS
-     */
-    // Generate a semi-permanent topic ID based on the URL or hardcoded string.
-    // Important: In a real app, make this unique to avoid public collisions.
-    const ROOM_ID = 'github-p2p-mesh-v2-global'; 
+/**
+ * --- CORE CONFIGURATION ---
+ */
+const CONFIG = {
+    roomId: 'gh-pages-mesh-v2-stable', // Public Room ID
+    signalUrl: 'https://ntfy.sh/', // Public free signaling
+    maxPeers: 12, // Limit to prevent browser overload
+    maxFileSize: 100 * 1024, // 100KB limit for Mesh efficiency
+    ice: { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] }
+};
+
+/**
+ * --- STATE & SOUNDS ---
+ */
+const state = {
+    id: crypto.randomUUID().substring(0, 8),
+    username: 'Anon-' + Math.floor(Math.random()*1000),
+    peers: {}, // { id: { conn, dc, username } }
+    msgCount: 0,
+    isTyping: false
+};
+
+// Pop sound (Base64 MP3) - short blip
+const NOTIFY_SOUND = new Audio("data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4LjI5LjEwMAAAAAAAAAAAAAAA//uQZAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWgAAAA0AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//uQZAAABoFvXdmYAAAAAA0gwAAABG1wY15gAAAAADSDAAAAAdQAAAAAAAAAAAAAAP/7kGQAAAaBZ13ZgAAAAADSDAAAAEbXBjXmAAAAAANIMAAAAAHUAAAAAAAAAAAAAAD//uQZAAABoFnXdmYAAAAAA0gwAAABG1wY15gAAAAADSDAAAAAdQAAAAAAAAAAAAAAP/7kGQAAAaBZ13ZgAAAAADSDAAAAEbXBjXmAAAAAANIMAAAAAHUAAAAAAAAAAAAAAD//uQZAAABoFnXdmYAAAAAA0gwAAABG1wY15gAAAAADSDAAAAAdQAAAAAAAAAAAAAA");
+
+/**
+ * --- INIT & SIGNALING ---
+ */
+async function init() {
+    logSystem(`Welcome, <b>${state.username}</b>. Initializing...`);
+    document.getElementById('username-edit').value = state.username;
     
-    // Using ntfy.sh as a free, public, CORS-friendly signaling channel.
-    // No backend code required. It uses GET (SSE) for receiving and POST for sending.
-    const SIGNALING_URL = `https://ntfy.sh/${ROOM_ID}`; 
+    // Connect to Signaling (NTFY SSE)
+    const eventSource = new EventSource(`${CONFIG.signalUrl}${CONFIG.roomId}/sse`);
     
-    // Mesh limits to prevent browser crash
-    const MAX_PEERS = 15; 
-    
-    const ICE_SERVERS = {
-        iceServers: [
-            { urls: 'stun:stun.l.google.com:19302' },
-            { urls: 'stun:stun1.l.google.com:19302' }
-        ]
+    eventSource.onopen = () => {
+        updateConnStatus('orange'); // Connected to signal, waiting for peers
+        sendSignal('presence', { name: state.username });
+        enableInput(true);
     };
 
-    /**
-     * STATE MANAGEMENT
-     */
-    const myId = crypto.randomUUID();
-    const myUsername = 'Anon-' + Math.floor(Math.random() * 10000);
-    document.getElementById('my-username-display').textContent = myUsername;
+    eventSource.onerror = () => {
+        updateConnStatus('red');
+        enableInput(false);
+    };
 
-    // Peers object: { [peerId]: { conn: RTCPeerConnection, channel: RTCDataChannel, username: string } }
-    const peers = {}; 
-    let eventSource = null; // The signaling connection
-    
-    // Typing state
-    let typingTimeout = null;
-
-    /**
-     * INITIALIZATION
-     */
-    async function init() {
-        console.log(`[Init] My ID: ${myId}`);
-        updateStatus('Connecting Signal...');
-        
-        // Start Signaling (Subscribe to SSE)
-        connectSignaling();
-
-        // Periodically announce presence to discover peers
-        setInterval(() => {
-            if (Object.keys(peers).length < MAX_PEERS) {
-                sendSignal('presence', { username: myUsername });
-            }
-        }, 5000);
-
-        // Announce immediately
-        setTimeout(() => sendSignal('presence', { username: myUsername }), 1000);
-        
-        // Setup Input listeners
-        const input = document.getElementById('message-input');
-        input.addEventListener('input', handleTyping);
-    }
-
-    /**
-     * SIGNALING (NTFY.SH)
-     */
-    function connectSignaling() {
-        // SSE Listener
-        eventSource = new EventSource(`${SIGNALING_URL}/sse`);
-        
-        eventSource.onopen = () => {
-            updateStatus('Signal Active', true);
-            enableChat();
-        };
-
-        eventSource.onerror = () => {
-            updateStatus('Signal Error', false);
-            disableChat();
-        };
-
-        eventSource.onmessage = async (event) => {
-            try {
-                const data = JSON.parse(event.data);
-                // ntfy wraps the payload in 'message', we assume our payload is inside or it IS the body
-                // With ntfy, event.data is the JSON info. The actual message content is in data.message
-                if (!data.message) return;
-                
-                const signal = JSON.parse(data.message);
-                if (signal.sender === myId) return; // Ignore self
-                
-                handleSignal(signal);
-            } catch (e) {
-                // Ignore malformed JSON (heartbeats etc)
-            }
-        };
-    }
-
-    async function sendSignal(type, payload, targetId = null) {
-        const body = JSON.stringify({
-            type,
-            sender: myId,
-            target: targetId,
-            ...payload
-        });
-
-        // Fire and forget fetch to ntfy.sh
+    eventSource.onmessage = (e) => {
         try {
-            await fetch(SIGNALING_URL, {
-                method: 'POST',
-                body: body,
-                headers: { 'Title': 'Sig' } // Header required by ntfy sometimes to avoid spam filters
-            });
-        } catch (e) {
-            console.error('Signaling send error', e);
+            const data = JSON.parse(e.data);
+            if(!data.message) return;
+            const signal = JSON.parse(data.message);
+            if(signal.sender !== state.id) handleSignal(signal);
+        } catch(err) {}
+    };
+
+    // Periodic announce
+    setInterval(() => {
+        if(Object.keys(state.peers).length < CONFIG.maxPeers) {
+            sendSignal('presence', { name: state.username });
         }
+    }, 5000);
+}
+
+// Send signal to NTFY
+function sendSignal(type, payload, target = null) {
+    const body = JSON.stringify({ type, sender: state.id, target, ...payload });
+    fetch(`${CONFIG.signalUrl}${CONFIG.roomId}`, { method: 'POST', body, headers: {'Title':'S'} }).catch(()=>{});
+}
+
+/**
+ * --- WEBRTC LOGIC ---
+ */
+async function handleSignal(sig) {
+    const { type, sender, target, sdp, candidate, name } = sig;
+    if(target && target !== state.id) return; // Not for me
+
+    // 1. Presence: Someone new appeared
+    if(type === 'presence') {
+        // Tie-breaker: larger ID calls smaller ID to avoid collisions
+        if(!state.peers[sender] && state.id > sender && Object.keys(state.peers).length < CONFIG.maxPeers) {
+            connectPeer(sender, name, true);
+        }
+        return;
     }
 
-    /**
-     * WEBRTC CORE LOGIC
-     */
-    async function handleSignal(signal) {
-        const { type, sender, target, sdp, candidate, username } = signal;
-
-        // If signal is targeted, it must match my ID
-        if (target && target !== myId) return;
-
-        // 1. Peer Discovery (Presence)
-        if (type === 'presence') {
-            // Collision handling: We only initiate if our ID > their ID to avoid glare
-            // And only if we aren't already connected
-            if (!peers[sender] && myId > sender) {
-                if (Object.keys(peers).length >= MAX_PEERS) return; // Mesh full
-                initiateConnection(sender, username);
-            }
-            return;
-        }
-
-        // 2. Offer
-        if (type === 'offer') {
-            if (peers[sender]) return; // Already connecting
-            if (Object.keys(peers).length >= MAX_PEERS) return; // Room full
-            await acceptConnection(sender, sdp, username);
-            return;
-        }
-
-        // 3. Answer
-        if (type === 'answer' && peers[sender]) {
-            await peers[sender].conn.setRemoteDescription(new RTCSessionDescription(sdp));
-            return;
-        }
-
-        // 4. ICE Candidate
-        if (type === 'ice' && peers[sender]) {
-            try {
-                await peers[sender].conn.addIceCandidate(candidate);
-            } catch (e) {
-                console.warn('ICE Error', e);
-            }
-            return;
-        }
-    }
-
-    // Initiator: Creates Offer
-    async function initiateConnection(peerId, peerUsername) {
-        console.log(`[WebRTC] Initiating to ${peerId}`);
-        const pc = createPeerConnection(peerId, peerUsername);
-        
-        // Create Data Channel
-        const dc = pc.createDataChannel("chat");
-        setupDataChannel(dc, peerId);
-        
-        peers[peerId].channel = dc;
-
-        // Create Offer
-        const offer = await pc.createOffer();
-        await pc.setLocalDescription(offer);
-
-        sendSignal('offer', { sdp: offer, username: myUsername }, peerId);
-    }
-
-    // Receiver: Accepts Offer, Creates Answer
-    async function acceptConnection(peerId, remoteSdp, peerUsername) {
-        console.log(`[WebRTC] Accepting from ${peerId}`);
-        const pc = createPeerConnection(peerId, peerUsername);
-        
-        pc.ondatachannel = (e) => {
-            setupDataChannel(e.channel, peerId);
-            peers[peerId].channel = e.channel;
-        };
-
-        await pc.setRemoteDescription(new RTCSessionDescription(remoteSdp));
+    // 2. Offer: Incoming call
+    if(type === 'offer') {
+        if(state.peers[sender] || Object.keys(state.peers).length >= CONFIG.maxPeers) return;
+        const pc = connectPeer(sender, name, false);
+        await pc.setRemoteDescription(new RTCSessionDescription(sdp));
         const answer = await pc.createAnswer();
         await pc.setLocalDescription(answer);
-
-        sendSignal('answer', { sdp: answer }, peerId);
+        sendSignal('answer', { sdp: answer }, sender);
+        return;
     }
 
-    function createPeerConnection(peerId, peerUsername) {
-        const pc = new RTCPeerConnection(ICE_SERVERS);
-        
-        // Store peer info
-        peers[peerId] = { conn: pc, username: peerUsername || 'Anon' };
-
-        // ICE Handler
-        pc.onicecandidate = (e) => {
-            if (e.candidate) {
-                sendSignal('ice', { candidate: e.candidate }, peerId);
-            }
-        };
-
-        // Connection State
-        pc.onconnectionstatechange = () => {
-            if (pc.connectionState === 'disconnected' || pc.connectionState === 'failed') {
-                removePeer(peerId);
-            }
-        };
-
-        return pc;
+    // 3. Answer: Call accepted
+    if(type === 'answer' && state.peers[sender]) {
+        await state.peers[sender].conn.setRemoteDescription(new RTCSessionDescription(sdp));
+        return;
     }
 
-    function removePeer(id) {
-        if (peers[id]) {
-            appendSystemMessage(`${peers[id].username} left.`);
-            peers[id].conn.close();
-            delete peers[id];
-            updateUserCount();
+    // 4. ICE: Network paths
+    if(type === 'ice' && state.peers[sender]) {
+        state.peers[sender].conn.addIceCandidate(candidate).catch(()=>{});
+    }
+}
+
+function connectPeer(peerId, peerName, initiator) {
+    const pc = new RTCPeerConnection(CONFIG.ice);
+    const peerObj = { conn: pc, username: peerName || 'Anon' };
+    state.peers[peerId] = peerObj;
+
+    pc.onicecandidate = e => { 
+        if(e.candidate) sendSignal('ice', { candidate: e.candidate }, peerId); 
+    };
+
+    pc.onconnectionstatechange = () => {
+        if(pc.connectionState === 'connected') {
+            updatePeerCount();
+            updateConnStatus('green');
+        } else if(pc.connectionState === 'disconnected' || pc.connectionState === 'failed') {
+            removePeer(peerId);
         }
-    }
+    };
 
-    /**
-     * DATA CHANNEL (MESSAGING)
-     */
-    function setupDataChannel(dc, peerId) {
-        dc.onopen = () => {
-            console.log(`[DataChannel] Open with ${peerId}`);
-            appendSystemMessage(`${peers[peerId].username} joined.`);
-            updateUserCount();
-        };
-
-        dc.onmessage = (e) => {
-            const data = JSON.parse(e.data);
-            if (data.type === 'chat') {
-                appendMessage(peers[peerId].username, data.content, 'peer');
-            } else if (data.type === 'typing') {
-                showTypingIndicator(peers[peerId].username);
-            }
-        };
-    }
-
-    // Broadcast to all connected peers
-    function broadcastData(data) {
-        const json = JSON.stringify(data);
-        Object.values(peers).forEach(p => {
-            if (p.channel && p.channel.readyState === 'open') {
-                p.channel.send(json);
-            }
+    if(initiator) {
+        const dc = pc.createDataChannel("chat");
+        setupDC(dc, peerId);
+        peerObj.dc = dc;
+        pc.createOffer().then(o => pc.setLocalDescription(o)).then(() => {
+            sendSignal('offer', { sdp: pc.localDescription, name: state.username }, peerId);
         });
+    } else {
+        pc.ondatachannel = e => {
+            peerObj.dc = e.channel;
+            setupDC(e.channel, peerId);
+        };
     }
+    return pc;
+}
 
-    /**
-     * UI LOGIC
-     */
-    function sendMessage(e) {
-        e.preventDefault();
-        const input = document.getElementById('message-input');
-        const text = input.value.trim();
-        
-        if (!text) return;
+function removePeer(id) {
+    if(state.peers[id]) {
+        logSystem(`${state.peers[id].username} disconnected`);
+        state.peers[id].conn.close();
+        delete state.peers[id];
+        updatePeerCount();
+        if(Object.keys(state.peers).length === 0) updateConnStatus('orange');
+    }
+}
 
-        // Render locally
-        appendMessage('Me', text, 'me');
+/**
+ * --- DATA CHANNELS ---
+ */
+function setupDC(dc, id) {
+    dc.onopen = () => {
+        logSystem(`${state.peers[id].username} joined`);
+        updatePeerCount();
+        // Sync username just in case
+        dc.send(JSON.stringify({ type: 'sys_name', name: state.username }));
+    };
+    dc.onmessage = e => handleDataMessage(id, JSON.parse(e.data));
+}
 
-        // Send to peers
-        broadcastData({ type: 'chat', content: text });
+function broadcast(msgObj) {
+    const str = JSON.stringify(msgObj);
+    Object.values(state.peers).forEach(p => {
+        if(p.dc && p.dc.readyState === 'open') p.dc.send(str);
+    });
+}
 
+/**
+ * --- MESSAGING LOGIC ---
+ */
+function handleDataMessage(id, data) {
+    const peer = state.peers[id];
+    
+    if(data.type === 'chat') {
+        renderMessage(peer.username, data.content, 'peer', data.meta);
+        playSound();
+    } 
+    else if(data.type === 'file') {
+        renderImage(peer.username, data.content, 'peer');
+        playSound();
+    }
+    else if(data.type === 'sys_name') {
+        peer.username = data.name; // Update local record of their name
+    }
+    else if(data.type === 'typing') {
+        showTyping(peer.username);
+    }
+}
+
+function handleSend(e) {
+    e.preventDefault();
+    const input = document.getElementById('msg-input');
+    const txt = input.value.trim();
+    if(!txt) return;
+
+    // Commands
+    if(txt === '/clear') {
+        document.getElementById('chat-view').innerHTML = '';
         input.value = '';
+        return;
+    }
+    if(txt === '/shrug') {
+        const shrug = '¯\\_(ツ)_/¯';
+        renderMessage(state.username, shrug, 'me');
+        broadcast({ type: 'chat', content: shrug });
+        input.value = '';
+        return;
     }
 
-    function appendMessage(sender, text, type) {
-        const container = document.getElementById('chat-container');
-        
-        const wrapper = document.createElement('div');
-        wrapper.className = `message-wrapper ${type}`;
-        
-        // Escape HTML
-        const safeText = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-        
-        const nameHtml = type === 'peer' ? `<div class="sender-name">${sender}</div>` : '';
-        const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    renderMessage('Me', txt, 'me');
+    broadcast({ type: 'chat', content: txt });
+    input.value = '';
+}
 
-        wrapper.innerHTML = `
-            ${nameHtml}
-            <div class="message-bubble">
-                ${safeText}
-                <div class="timestamp">${time}</div>
-            </div>
-        `;
-        
-        container.appendChild(wrapper);
-        container.scrollTop = container.scrollHeight;
+function handleFileSelect(input) {
+    const file = input.files[0];
+    if(!file) return;
+    
+    if(file.size > CONFIG.maxFileSize) {
+        alert('File too large! Max 100KB.');
+        input.value = '';
+        return;
     }
 
-    function appendSystemMessage(text) {
-        const container = document.getElementById('chat-container');
-        const el = document.createElement('div');
-        el.className = 'message-wrapper system';
-        el.innerHTML = `<div class="system-msg">${text}</div>`;
-        container.appendChild(el);
-        container.scrollTop = container.scrollHeight;
-    }
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const base64 = e.target.result;
+        renderImage('Me', base64, 'me');
+        broadcast({ type: 'file', content: base64 });
+    };
+    reader.readAsDataURL(file);
+    input.value = '';
+}
 
-    function updateUserCount() {
-        const count = Object.keys(peers).length + 1; // +1 for me
-        document.getElementById('connection-count').innerText = `${count} users online`;
-    }
+/**
+ * --- UI & RENDERING ---
+ */
+function renderMessage(sender, text, type, meta) {
+    const box = document.getElementById('chat-view');
+    const div = document.createElement('div');
+    div.className = `msg ${type}`;
+    
+    // Markdown Parsing
+    let html = text
+        .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;") // Sanitize
+        .replace(/\`(.+?)\`/g, '<code>$1</code>') // Code
+        .replace(/\*\*(.+?)\*\*/g, '<b>$1</b>')   // Bold
+        .replace(/\_(.+?)\_/g, '<i>$1</i>');     // Italic
 
-    function updateStatus(text, isOnline = false) {
-        const badge = document.getElementById('status-badge');
-        badge.innerText = text;
-        badge.className = `status-badge ${isOnline ? 'online' : 'offline'}`;
-    }
+    const time = new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+    
+    div.innerHTML = `
+        <div class="sender">${sender}</div>
+        <div class="bubble">
+            ${html}
+            <div class="meta">${time}</div>
+        </div>
+    `;
+    box.appendChild(div);
+    box.scrollTop = box.scrollHeight;
+}
 
-    function enableChat() {
-        document.getElementById('message-input').disabled = false;
-        document.getElementById('send-btn').disabled = false;
-    }
+function renderImage(sender, base64, type) {
+    const box = document.getElementById('chat-view');
+    const div = document.createElement('div');
+    div.className = `msg ${type}`;
+    const time = new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
 
-    function disableChat() {
-        document.getElementById('message-input').disabled = true;
-        document.getElementById('send-btn').disabled = true;
-    }
+    div.innerHTML = `
+        <div class="sender">${sender}</div>
+        <div class="bubble" style="padding:5px;">
+            <img src="${base64}" class="chat-img" onclick="window.open(this.src)">
+            <div class="meta" style="margin-right:10px">${time}</div>
+        </div>
+    `;
+    box.appendChild(div);
+    box.scrollTop = box.scrollHeight;
+}
 
-    function handleTyping() {
-        broadcastData({ type: 'typing' });
-    }
+function logSystem(msg) {
+    const box = document.getElementById('chat-view');
+    box.innerHTML += `<div class="msg sys"><div class="sys-bubble">${msg}</div></div>`;
+    box.scrollTop = box.scrollHeight;
+}
 
-    function showTypingIndicator(username) {
-        const el = document.getElementById('typing-indicator');
-        el.innerText = `${username} is typing...`;
-        el.style.display = 'block';
-        
-        if (typingTimeout) clearTimeout(typingTimeout);
-        typingTimeout = setTimeout(() => {
-            el.style.display = 'none';
-        }, 1000);
-    }
+function showTyping(name) {
+    const el = document.getElementById('typing-notify');
+    el.innerText = `${name} is typing...`;
+    el.classList.add('visible');
+    clearTimeout(state.typingTimer);
+    state.typingTimer = setTimeout(() => el.classList.remove('visible'), 1500);
+}
 
-    // Start App
-    window.addEventListener('load', init);
+// Input Typing trigger
+document.getElementById('msg-input').addEventListener('input', () => {
+    broadcast({ type: 'typing' });
+});
+
+/**
+ * --- SETTINGS & UTILS ---
+ */
+function toggleSettings() {
+    const el = document.getElementById('settings-modal');
+    el.style.display = el.style.display === 'flex' ? 'none' : 'flex';
+}
+
+function saveSettings() {
+    const newName = document.getElementById('username-edit').value.trim();
+    if(newName && newName !== state.username) {
+        state.username = newName;
+        logSystem(`You changed name to ${newName}`);
+        broadcast({ type: 'sys_name', name: newName });
+    }
+    toggleSettings();
+}
+
+function playSound() {
+    if(document.getElementById('sound-toggle').checked) {
+        NOTIFY_SOUND.play().catch(()=>{});
+    }
+}
+
+function enableInput(bool) {
+    document.getElementById('msg-input').disabled = !bool;
+    document.getElementById('send-btn').disabled = !bool;
+}
+
+function updatePeerCount() {
+    const c = Object.keys(state.peers).length;
+    document.getElementById('user-count').innerText = `${c} Peer${c!==1?'s':''}`;
+}
+
+function updateConnStatus(color) {
+    const d = document.getElementById('conn-dot');
+    d.className = `status-dot ${color}`;
+}
+
+// Start
+window.onload = init;
 
 </script>
 </body>
-  </html>
+    </html>
