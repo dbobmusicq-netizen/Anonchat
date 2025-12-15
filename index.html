@@ -1,434 +1,356 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Mesh Chat v5.0 - Stable Core</title>
+    <title>Mesh Chat v8.0 - Master</title>
+    <!-- 
+        MIT License | Anonymous P2P Mesh Chat v8.0
+        Combined Features: Reliable Peering, Private Chat, 10MB Files, Mobile UI
+    -->
     <style>
         :root {
-            --bg: #121212; --panel: #1e1e1e; --text: #e0e0e0; --muted: #a0a0a0;
-            --accent: #00e5ff; --accent-dim: #00acc1;
-            --private: #d500f9; --private-bg: #4a148c;
-            --me-bg: #006064; --peer-bg: #263238;
-            --sys-bg: #37474f; --danger: #ff5252;
+            /* DARK MODE (Default) */
+            --bg: #0f172a; --panel: #1e293b; --text: #f1f5f9; --muted: #94a3b8;
+            --accent: #3b82f6; --accent-dim: #2563eb;
+            --me-bg: #0f4c81; --peer-bg: #334155;
+            --sys-bg: #1e293b; --private: #8b5cf6;
             --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, sans-serif;
         }
 
         body.light-mode {
-            --bg: #f0f2f5; --panel: #ffffff; --text: #1c1e21; --muted: #65676b;
-            --accent: #0084ff; --accent-dim: #006bcf;
-            --me-bg: #0084ff; --peer-bg: #e4e6eb;
-            --sys-bg: #e4e6eb; 
+            --bg: #f8fafc; --panel: #ffffff; --text: #0f172a; --muted: #64748b;
+            --accent: #0ea5e9; --me-bg: #0ea5e9; --peer-bg: #e2e8f0; --sys-bg: #f1f5f9;
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; outline: none; -webkit-tap-highlight-color: transparent; }
-        
-        body { background: var(--bg); color: var(--text); font-family: var(--font); height: 100dvh; display: flex; flex-direction: column; overflow: hidden; }
+
+        body {
+            background: var(--bg); color: var(--text); font-family: var(--font);
+            height: 100vh; height: 100dvh; /* Mobile viewport fix */
+            display: flex; flex-direction: column; overflow: hidden;
+        }
 
         /* HEADER */
         header {
-            background: var(--panel); padding: 0 15px; height: 60px;
+            background: var(--panel); height: 60px; padding: 0 15px;
             display: flex; justify-content: space-between; align-items: center;
             border-bottom: 1px solid rgba(128,128,128,0.2); flex-shrink: 0; z-index: 10;
+            transition: background 0.3s;
         }
         
-        /* Private Mode Styling */
-        body.private-active header { background: #2a0a38; border-bottom-color: var(--private); }
+        /* PRIVATE MODE STYLING */
+        body.private-active header { background: #2e1065; border-bottom: 1px solid var(--private); }
+        body.private-active .brand span { color: #c4b5fd; }
         body.private-active #send-btn { background: var(--private); }
-        
+        body.private-active .me .bubble { background: #5b21b6; }
+
         .brand { font-weight: 800; font-size: 1.1rem; display: flex; align-items: center; gap: 8px; }
         .brand span { color: var(--accent); }
-        body.private-active .brand span { color: var(--private); }
+        
+        /* Status Dot */
+        .status-dot { width: 10px; height: 10px; border-radius: 50%; background: #ef4444; box-shadow: 0 0 5px #ef4444; transition: 0.3s; }
+        .status-dot.green { background: #22c55e; box-shadow: 0 0 5px #22c55e; }
+        .status-dot.orange { background: #f59e0b; box-shadow: 0 0 5px #f59e0b; }
 
-        .controls { display: flex; gap: 15px; align-items: center; }
-        .icon-btn { cursor: pointer; fill: var(--muted); width: 24px; height: 24px; display: block; }
-        .icon-btn:hover { fill: var(--text); }
+        .header-controls { display: flex; gap: 12px; align-items: center; }
+        .icon-btn { width: 32px; height: 32px; border-radius: 50%; background: rgba(255,255,255,0.05); display: grid; place-items: center; cursor: pointer; border: none; color: var(--text); }
+        .icon-btn:hover { background: rgba(255,255,255,0.1); }
 
         /* CHAT AREA */
-        #chat-view { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 12px; scroll-behavior: smooth; }
+        #chat-view { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 10px; scroll-behavior: smooth; }
         
-        .msg { display: flex; flex-direction: column; max-width: 85%; animation: popIn 0.2s; }
-        @keyframes popIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
-        
+        .msg { display: flex; flex-direction: column; max-width: 85%; animation: fade 0.2s; }
+        @keyframes fade { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
         .msg.me { align-self: flex-end; align-items: flex-end; }
         .msg.peer { align-self: flex-start; align-items: flex-start; }
         .msg.sys { align-self: center; max-width: 95%; align-items: center; margin: 10px 0; }
 
         .bubble { padding: 10px 14px; border-radius: 18px; font-size: 0.95rem; line-height: 1.4; word-wrap: break-word; }
         .me .bubble { background: var(--me-bg); color: #fff; border-bottom-right-radius: 4px; }
-        body.light-mode .me .bubble { color: #fff; }
         .peer .bubble { background: var(--peer-bg); color: var(--text); border-bottom-left-radius: 4px; }
         
-        /* Clickable Username */
-        .sender { font-size: 0.7rem; color: var(--muted); margin-bottom: 4px; margin-left: 10px; cursor: pointer; text-decoration: underline; text-decoration-style: dotted; }
-        .sender:hover { color: var(--accent); }
+        .sender { font-size: 0.7rem; color: var(--muted); margin-bottom: 2px; margin-left: 10px; cursor: pointer; display: flex; align-items: center; gap: 4px; }
+        .sender:hover { color: var(--accent); text-decoration: underline; }
         .me .sender { display: none; }
-        
-        .sys-bubble { background: var(--sys-bg); color: var(--muted); padding: 4px 12px; border-radius: 50px; font-size: 0.75rem; font-style: italic; text-align: center; }
-        .meta { font-size: 0.65rem; opacity: 0.6; text-align: right; margin-top: 4px; }
-        
-        /* PRIVATE BAR */
-        #private-bar { display: none; align-items: center; gap: 10px; color: #e1bee7; font-size: 0.9rem; }
-        body.private-active #private-bar { display: flex; }
-        body.private-active #global-head { display: none; }
-        .pvt-btn { background: rgba(255,255,255,0.1); border: none; color: #fff; padding: 5px 10px; border-radius: 4px; cursor: pointer; }
+
+        .sys-bubble { background: var(--sys-bg); color: var(--muted); padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; text-align: center; border: 1px solid rgba(128,128,128,0.1); }
+
+        /* PRIVATE HEADER BAR */
+        #private-header { display: none; align-items: center; gap: 10px; color: #fff; font-size: 0.9rem; width: 100%; }
+        body.private-active #private-header { display: flex; }
+        body.private-active #global-header { display: none; }
 
         /* INPUT AREA */
-        #input-zone { background: var(--panel); padding: 10px; display: flex; gap: 8px; align-items: center; border-top: 1px solid rgba(128,128,128,0.2); flex-shrink: 0; padding-bottom: calc(10px + env(safe-area-inset-bottom)); }
-        #file-btn { cursor: pointer; display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; flex-shrink: 0; }
-        #msg-input { flex: 1; background: rgba(128,128,128,0.1); border: 1px solid transparent; padding: 10px 15px; border-radius: 20px; color: var(--text); font-size: 1rem; min-width: 0; }
+        #input-zone { background: var(--panel); padding: 10px; display: flex; gap: 10px; align-items: center; border-top: 1px solid rgba(128,128,128,0.2); padding-bottom: calc(10px + env(safe-area-inset-bottom)); }
+        #msg-input { flex: 1; background: rgba(0,0,0,0.2); border: 1px solid rgba(128,128,128,0.2); padding: 12px 16px; border-radius: 24px; color: var(--text); font-size: 1rem; }
         #msg-input:focus { border-color: var(--accent); }
-        body.private-active #msg-input:focus { border-color: var(--private); }
-        #send-btn { background: var(--accent); border: none; width: 42px; height: 42px; border-radius: 50%; color: #000; cursor: pointer; display: grid; place-items: center; flex-shrink: 0; }
+        #send-btn { background: var(--accent); border: none; width: 44px; height: 44px; border-radius: 50%; color: #fff; cursor: pointer; font-weight: bold; flex-shrink: 0; }
+        #send-btn:disabled { background: var(--muted); opacity: 0.5; }
 
-        /* MODALS & UTILS */
-        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 100; display: none; align-items: center; justify-content: center; backdrop-filter: blur(2px); }
-        .modal { background: var(--panel); width: 85%; max-width: 350px; padding: 20px; border-radius: 16px; border: 1px solid rgba(128,128,128,0.2); }
-        .setting-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
-        .switch { position: relative; display: inline-block; width: 40px; height: 24px; }
-        .switch input { opacity: 0; width: 0; height: 0; }
-        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #555; transition: .4s; border-radius: 34px; }
-        .slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; }
-        input:checked + .slider { background-color: var(--accent); }
-        input:checked + .slider:before { transform: translateX(16px); }
+        /* FILE ATTACHMENT */
+        .chat-img { max-width: 100%; border-radius: 10px; margin-top: 5px; cursor: pointer; }
+        .file-attach { display: flex; align-items: center; gap: 10px; background: rgba(0,0,0,0.2); padding: 8px; border-radius: 8px; margin-top: 5px; }
+        .progress-bar { width: 100%; height: 4px; background: #333; border-radius: 2px; margin-top: 5px; overflow: hidden; }
+        .progress-fill { height: 100%; background: var(--accent); width: 0%; transition: width 0.1s; }
 
-        .hidden { display: none !important; }
-        code { background: rgba(128,128,128,0.3); padding: 2px 4px; border-radius: 4px; font-family: monospace; }
-        .status-dot { width: 10px; height: 10px; border-radius: 50%; background: #555; display: inline-block; margin-right: 5px; }
-        .status-dot.green { background: #00e676; box-shadow: 0 0 5px #00e676; }
-        .status-dot.orange { background: #ff9100; }
-        .status-dot.red { background: var(--danger); }
-        
-        .chat-img { max-width: 100%; border-radius: 12px; margin-top: 5px; cursor: pointer; }
-        .action-btn { background: var(--accent); color: #000; border: none; padding: 5px 12px; border-radius: 4px; font-size: 0.8rem; cursor: pointer; margin: 5px 5px 0 0; font-weight: bold; }
-        .action-btn.reject { background: var(--danger); color: #fff; }
+        /* UTILS */
+        .hidden { display: none; }
     </style>
 </head>
 <body>
 
 <header>
     <!-- GLOBAL HEADER -->
-    <div class="brand" id="global-head">
-        <div id="conn-dot" class="status-dot red"></div>
+    <div class="brand" id="global-header">
+        <div id="conn-dot" class="status-dot"></div>
         <div>Mesh<span>Chat</span></div>
     </div>
 
-    <!-- PRIVATE HEADER -->
-    <div id="private-bar">
-        <button class="pvt-btn" onclick="exitPrivate()">← Back</button>
-        <span id="pvt-name">User</span>
+    <!-- PRIVATE CHAT HEADER -->
+    <div id="private-header">
+        <button class="icon-btn" onclick="exitPrivate()" style="width:auto; padding:0 10px; border-radius:4px; font-size:0.8rem">← Back</button>
+        <span id="pvt-username">User</span>
     </div>
 
-    <div class="controls">
-        <span id="user-count" style="font-size:0.75rem; color:var(--muted)">0 Peers</span>
-        <svg class="icon-btn" onclick="toggleSettings()" viewBox="0 0 24 24"><path d="M12,15.5A3.5,3.5 0 0,1 8.5,12A3.5,3.5 0 0,1 12,8.5A3.5,3.5 0 0,1 15.5,12A3.5,3.5 0 0,1 12,15.5M19.43,12.97C19.47,12.65 19.5,12.33 19.5,12C19.5,11.67 19.47,11.34 19.43,11L21.54,9.37C21.73,9.22 21.78,8.95 21.66,8.73L19.66,5.27C19.54,5.05 19.27,4.96 19.05,5.05L16.56,6.05C16.04,5.66 15.5,5.32 14.87,5.07L14.5,2.42C14.46,2.18 14.25,2 14,2H10C9.75,2 9.54,2.18 9.5,2.42L9.13,5.07C8.5,5.32 7.96,5.66 7.44,6.05L4.95,5.05C4.73,4.96 4.46,5.05 4.34,5.27L2.34,8.73C2.21,8.95 2.27,9.22 2.46,9.37L4.57,11C4.53,11.34 4.5,11.67 4.5,12C4.5,12.33 4.53,12.65 4.57,12.97L2.46,14.63C2.27,14.78 2.21,15.05 2.34,15.27L4.34,18.73C4.46,18.95 4.73,19.04 4.95,18.95L7.44,17.95C7.96,18.34 8.5,18.68 9.13,18.93L9.5,21.58C9.54,21.82 9.75,22 10,22H14C14.25,22 14.46,21.82 14.5,21.58L14.87,18.93C15.5,18.68 16.04,18.34 16.56,17.95L19.05,18.95C19.27,19.04 19.54,18.95 19.66,18.73L21.66,15.27C21.78,15.05 21.73,14.78 21.54,14.63L19.43,12.97Z"/></svg>
+    <div class="header-controls">
+        <span id="peer-count" style="font-size:0.75rem; color:var(--muted)">0 Peers</span>
+        <button class="icon-btn" onclick="forceReconnect()" title="Reset Connection">↻</button>
+        <button class="icon-btn" onclick="document.body.classList.toggle('light-mode')" title="Theme">◑</button>
     </div>
 </header>
 
 <div id="chat-view">
-    <div class="msg sys"><div class="sys-bubble">Connecting to Stable Mesh v5.0...</div></div>
+    <div class="msg sys"><div class="sys-bubble">Initializing Mesh Network...</div></div>
 </div>
 
-<form id="input-zone" onsubmit="sendMsg(event)">
-    <label id="file-btn" title="Send File (Max 10MB)">
-        <input type="file" id="file-input" class="hidden" onchange="sendFile(this)">
-        <svg viewBox="0 0 24 24" class="icon-btn"><path d="M16.5,6v11.5c0,2.21-1.79,4-4,4s-4-1.79-4-4V5c0-1.38,1.12-2.5,2.5-2.5s2.5,1.12,2.5,2.5v10.5c0,0.55-0.45,1-1,1 s-1-0.45-1-1V6H10v9.5c0,1.38,1.12,2.5,2.5,2.5s2.5-1.12,2.5-2.5V5c0-2.21-1.79-4-4-4S7,2.79,7,5v12.5c0,3.04,2.46,5.5,5.5,5.5 s5.5-2.46,5.5-5.5V6H16.5z"/></svg>
+<form id="input-zone" onsubmit="sendMessage(event)">
+    <label style="cursor:pointer; color:var(--muted); padding:5px">
+        <input type="file" class="hidden" onchange="sendFile(this)">
+        <svg width="24" height="24" fill="currentColor" viewBox="0 0 24 24"><path d="M16.5 6v11.5c0 2.21-1.79 4-4 4s-4-1.79-4-4V5a2.5 2.5 0 0 1 5 0v10.5c0 .55-.45 1-1 1s-1-.45-1-1V6H10v9.5a2.5 2.5 0 0 0 5 0V5c0-2.21-1.79-4-4-4S7 2.79 7 5v12.5c0 3.04 2.46 5.5 5.5 5.5s5.5-2.46 5.5-5.5V6h-1.5z"/></svg>
     </label>
-    <input type="text" id="msg-input" placeholder="Message..." autocomplete="off" disabled>
-    <button type="button" id="send-btn" onclick="sendMsg(event)" disabled>
-        <svg viewBox="0 0 24 24" style="width:20px;height:20px;fill:currentcolor"><path d="M2.01,21L23,12L2.01,3L2,10l15,2l-15,2L2.01,21z"/></svg>
-    </button>
+    <input type="text" id="msg-input" placeholder="Type a message..." autocomplete="off">
+    <button type="button" id="send-btn" onclick="sendMessage(event)">➤</button>
 </form>
-
-<!-- SETTINGS -->
-<div id="settings-modal" class="modal-overlay" onclick="if(event.target===this) toggleSettings()">
-    <div class="modal">
-        <h3 style="color:var(--accent); margin-bottom:15px">Settings</h3>
-        <div class="setting-row">
-            <label>Name</label>
-            <input type="text" id="username-edit" style="background:#333; border:none; color:#fff; padding:5px; border-radius:4px; text-align:right; width:120px;" maxlength="12">
-        </div>
-        <div class="setting-row">
-            <label>Sound</label>
-            <label class="switch"><input type="checkbox" id="sound-toggle" checked><span class="slider"></span></label>
-        </div>
-        <div class="setting-row">
-            <label>Light Mode</label>
-            <label class="switch"><input type="checkbox" id="theme-toggle" onchange="document.body.classList.toggle('light-mode')"><span class="slider"></span></label>
-        </div>
-        <div style="text-align:right; margin-top:15px">
-            <button onclick="saveSettings()" style="background:var(--accent); border:none; padding:8px 20px; border-radius:4px; font-weight:bold;">Save</button>
-        </div>
-    </div>
-</div>
 
 <script>
 /**
- * --- MESH CHAT V5.0 CORE CONFIGURATION ---
- * "Polite Peer" Pattern for maximum stability.
+ * --- V8.0 CONFIGURATION ---
+ * Global Room: 'mesh-v8-global' ensures everyone sees each other.
+ * Signaling: Free ntfy.sh (No server setup required).
+ * STUN: Massive list to punch through mobile networks.
  */
-const CONFIG = {
-    roomId: 'gh-mesh-v5-stable-room',
-    signalUrl: 'https://ntfy.sh/',
-    maxPeers: 15,
-    chunkSize: 16384, // 16KB safe chunk size
-    ice: {
-        iceServers: [
-            { urls: 'stun:stun.l.google.com:19302' },
-            { urls: 'stun:stun1.l.google.com:19302' },
-            { urls: 'stun:stun2.l.google.com:19302' },
-            { urls: 'stun:global.stun.twilio.com:3478' }
-        ]
-    }
+const ROOM_ID = 'mesh-chat-v8-master'; 
+const SIGNAL_URL = 'https://ntfy.sh/';
+const CHUNK_SIZE = 16 * 1024; // 16KB chunks for WebRTC stability
+
+const ICE_CONFIG = {
+    iceServers: [
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'stun:stun1.l.google.com:19302' },
+        { urls: 'stun:stun2.l.google.com:19302' },
+        { urls: 'stun:global.stun.twilio.com:3478' }
+    ]
 };
 
+// Application State
 const state = {
-    id: crypto.randomUUID(), // Long UUID for better collision avoidance
-    username: 'Anon-' + Math.floor(Math.random() * 1000),
-    peers: {}, // { [id]: { conn, dc, username, polite } }
-    msgs: { global: [] },
-    activeChat: 'global',
-    downloads: {}
+    myId: 'U-' + Math.floor(Math.random() * 1000000), // Random ID
+    myName: 'Anon-' + Math.floor(Math.random() * 1000),
+    peers: {}, // { peerId: { conn, dc, username, connected } }
+    msgs: { global: [] }, // Stores chat history: 'global' or peerId
+    activeChat: 'global', // 'global' or peerId
+    downloads: {}, // Tracks incoming files
+    seenSignals: new Set() // Deduplication
 };
 
-const SOUND = new Audio("data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4LjI5LjEwMAAAAAAAAAAAAAAA//uQZAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWgAAAA0AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//uQZAAABoFvXdmYAAAAAA0gwAAABG1wY15gAAAAADSDAAAAAdQAAAAAAAAAAAAAAP/7kGQAAAaBZ13ZgAAAAADSDAAAAEbXBjXmAAAAAANIMAAAAAHUAAAAAAAAAAAAAAD//uQZAAABoFnXdmYAAAAAA0gwAAABG1wY15gAAAAADSDAAAAAdQAAAAAAAAAAAAAAD//uQZAAABoFnXdmYAAAAAA0gwAAABG1wY15gAAAAADSDAAAAAdQAAAAAAAAAAAAAAD//uQZAAABoFnXdmYAAAAAA0gwAAABG1wY15gAAAAADSDAAAAAdQAAAAAAAAAAAAAA");
-
-/* --- INITIALIZATION & SIGNALING --- */
-async function init() {
-    logSys(`Welcome <b>${state.username}</b>.<br>Mesh v5.0 - Stable.`);
-    document.getElementById('username-edit').value = state.username;
+/* --- INITIALIZATION --- */
+function init() {
+    logSystem(`Welcome <b>${state.myName}</b>. Waiting for peers...`);
     
-    const es = new EventSource(`${CONFIG.signalUrl}${CONFIG.roomId}/sse`);
+    // Connect to Signaling SSE
+    const es = new EventSource(`${SIGNAL_URL}${ROOM_ID}/sse`);
     es.onopen = () => {
-        updateStatus('orange');
-        enableInput(true);
-        announcePresence(); // Start immediately
+        updateDot('orange');
+        // Aggressive Discovery: Announce every 4 seconds
+        setInterval(() => broadcastSignal('presence', { name: state.myName }), 4000);
+        broadcastSignal('presence', { name: state.myName });
     };
-    es.onerror = () => { updateStatus('red'); enableInput(false); };
-    es.onmessage = e => {
+    es.onerror = () => updateDot('red');
+    es.onmessage = (e) => {
         try {
-            const d = JSON.parse(e.data);
-            if(d.message) handleSignal(JSON.parse(d.message));
-        } catch(err){}
+            const data = JSON.parse(e.data);
+            if (data.message) handleSignal(JSON.parse(data.message));
+        } catch(err) {}
     };
-
-    // Heartbeat: Announce presence randomly every 4-6 seconds
-    setInterval(announcePresence, 4500);
 }
 
-function announcePresence() {
-    if(Object.keys(state.peers).length < CONFIG.maxPeers) {
-        sendSignal('presence', { name: state.username });
-    }
+// Send signal to ntfy.sh
+function broadcastSignal(type, data, targetId = null) {
+    const id = Math.random().toString(36);
+    const body = JSON.stringify({ type, sender: state.myId, target: targetId, id, ...data });
+    fetch(`${SIGNAL_URL}${ROOM_ID}`, { method: 'POST', body, headers: { 'Title': 'Sig' } }).catch(()=>{});
 }
 
-function sendSignal(type, data, target=null) {
-    const payload = JSON.stringify({ type, sender: state.id, target, ...data });
-    // Random jitter to prevent network spikes
-    setTimeout(() => {
-        fetch(`${CONFIG.signalUrl}${CONFIG.roomId}`, { method:'POST', body:payload, headers:{'Title':'S'} }).catch(()=>{});
-    }, Math.random() * 200);
-}
-
-/* --- ROBUST WEBRTC (POLITE PEER) --- */
+/* --- WEBRTC ENGINE (Polite Peer) --- */
 async function handleSignal(sig) {
-    const { type, sender, target, sdp, candidate, name } = sig;
-    if(sender === state.id) return; // Ignore self
-    if(target && target !== state.id) return; // Not for me
+    if (sig.sender === state.myId || state.seenSignals.has(sig.id)) return;
+    if (sig.target && sig.target !== state.myId) return;
+    state.seenSignals.add(sig.id);
 
-    // 1. PRESENCE (Discovery)
-    if(type === 'presence') {
-        // Deterministic Connection Logic:
-        // If I am NOT connected, and My ID > Their ID, I initiate.
-        // If My ID < Their ID, I wait.
-        // This prevents "Glare" (collision).
-        if(!state.peers[sender]) {
-            if(state.id > sender) {
-                // I am the "Impolite" peer (Initiator)
-                createPeer(sender, name, true); 
-            }
+    const peerId = sig.sender;
+    
+    // 1. PRESENCE & COLLISION HANDLING
+    if (sig.type === 'presence') {
+        // If we aren't connected, and My ID > Their ID, I initiate.
+        // This ensures only ONE person calls, preventing "Glare".
+        if (!state.peers[peerId] && state.myId > peerId) {
+            initiatePeer(peerId, sig.name, true);
         }
         return;
     }
 
-    // 2. CONNECTION HANDLING
-    // Ensure peer object exists before handling signal
-    if(!state.peers[sender]) {
-        // If receiving offer/answer/ice from unknown, create passive peer
-        if(type === 'offer') createPeer(sender, name, false); 
-        else return; // Ignore orphan answers/ice
-    }
+    // 2. CREATE PEER IF MISSING (Passive)
+    if (!state.peers[peerId]) initiatePeer(peerId, sig.name || 'Anon', false);
 
-    const p = state.peers[sender];
-    const pc = p.conn;
+    const pc = state.peers[peerId].conn;
 
+    // 3. HANDLE SIGNALS
     try {
-        if (type === 'offer') {
-            // Polite Peer Logic: collision handling
-            const offerCollision = (p.makingOffer || pc.signalingState !== 'stable');
-            // If collision & I am impolite (initiator), I ignore their offer
-            if (offerCollision && !p.polite) return;
-            
-            await pc.setRemoteDescription(sdp);
+        if (sig.type === 'offer') {
+            await pc.setRemoteDescription(sig.sdp);
             const answer = await pc.createAnswer();
             await pc.setLocalDescription(answer);
-            sendSignal('answer', { sdp: answer }, sender);
-        } 
-        else if (type === 'answer') {
-            if(pc.signalingState === 'have-local-offer') {
-                await pc.setRemoteDescription(sdp);
-            }
-        } 
-        else if (type === 'ice') {
-            await pc.addIceCandidate(candidate);
+            broadcastSignal('answer', { sdp: answer }, peerId);
+        } else if (sig.type === 'answer') {
+            await pc.setRemoteDescription(sig.sdp);
+        } else if (sig.type === 'ice') {
+            await pc.addIceCandidate(sig.candidate);
         }
-    } catch (err) {
-        console.error('Signal Error:', err);
-        // On critical error, hard restart connection
-        if(!p.polite) { 
-            p.conn.close(); 
-            delete state.peers[sender]; 
-            announcePresence(); 
-        }
-    }
+    } catch (e) { console.error(e); }
 }
 
-function createPeer(id, name, initiator) {
-    if(state.peers[id]) return; // Safety
+function initiatePeer(peerId, username, initiator) {
+    if (state.peers[peerId]) return;
 
-    const pc = new RTCPeerConnection(CONFIG.ice);
-    // Polite: Initiator is NOT polite (Impolite). Receiver IS polite.
-    const polite = !initiator; 
-    
-    state.peers[id] = { conn: pc, username: name||'Anon', polite, makingOffer: false };
-    const peer = state.peers[id];
+    const pc = new RTCPeerConnection(ICE_CONFIG);
+    state.peers[peerId] = { conn: pc, username: username, connected: false };
 
-    // Handler: Negotiation Needed (Perfect Negotiation)
-    pc.onnegotiationneeded = async () => {
-        try {
-            peer.makingOffer = true;
-            await pc.setLocalDescription();
-            sendSignal('offer', { sdp: pc.localDescription, name: state.username }, id);
-        } catch(err) { console.error(err); } 
-        finally { peer.makingOffer = false; }
-    };
-
-    pc.onicecandidate = e => { if(e.candidate) sendSignal('ice', { candidate:e.candidate }, id); };
+    pc.onicecandidate = e => { if (e.candidate) broadcastSignal('ice', { candidate: e.candidate }, peerId); };
     
     pc.onconnectionstatechange = () => {
         const s = pc.connectionState;
-        if(s === 'connected') { updateStatus('green'); updateCount(); }
-        if(s === 'failed' || s === 'disconnected') {
-            // Aggressive cleanup
-            logSys(`${peer.username} lost.`);
-            pc.close();
-            delete state.peers[id];
+        if (s === 'connected') {
+            state.peers[peerId].connected = true;
+            updateDot('green');
+            logSystem(`${state.peers[peerId].username} joined.`);
             updateCount();
-            if(state.activeChat === id) exitPrivate();
-            if(Object.keys(state.peers).length === 0) updateStatus('orange');
+        } else if (s === 'failed' || s === 'disconnected') {
+            closePeer(peerId);
         }
     };
 
-    // Data Channel Setup
-    if(initiator) {
-        const dc = pc.createDataChannel("chat", { negotiated: true, id: 0 });
-        setupDC(dc, id);
+    if (initiator) {
+        const dc = pc.createDataChannel("chat");
+        setupDC(dc, peerId);
+        pc.createOffer().then(o => { pc.setLocalDescription(o); broadcastSignal('offer', { sdp: o, name: state.myName }, peerId); });
     } else {
-        // Wait for negotiated channel
-        pc.ondatachannel = e => {
-            // We use negotiated:true id:0 for simplicity, but if listener fires:
-            setupDC(e.channel, id); 
-        };
-        // Manual fallback if using negotiated id 0 on both sides
-        const dc = pc.createDataChannel("chat", { negotiated: true, id: 0 });
-        setupDC(dc, id);
+        pc.ondatachannel = e => setupDC(e.channel, peerId);
     }
 }
 
-function setupDC(dc, id) {
-    const p = state.peers[id];
-    p.dc = dc;
-    dc.onopen = () => { 
-        logSys(`${p.username} connected.`); 
-        updateCount();
-        dc.send(JSON.stringify({ type:'name_sync', name: state.username }));
+function setupDC(dc, peerId) {
+    state.peers[peerId].dc = dc;
+    dc.onopen = () => {
+        // Send current name on connect
+        dc.send(JSON.stringify({ type: 'name', name: state.myName }));
     };
-    dc.onmessage = e => handleData(id, JSON.parse(e.data));
+    dc.onmessage = e => handleData(peerId, JSON.parse(e.data));
 }
 
-/* --- DATA HANDLING --- */
-function handleData(id, data) {
-    const p = state.peers[id];
+function closePeer(peerId) {
+    if (state.peers[peerId]) {
+        state.peers[peerId].conn.close();
+        logSystem(`${state.peers[peerId].username} left.`);
+        delete state.peers[peerId];
+        if (state.activeChat === peerId) exitPrivate();
+        updateCount();
+        if (Object.keys(state.peers).length === 0) updateDot('orange');
+    }
+}
+
+/* --- DATA & ROUTING --- */
+function handleData(peerId, data) {
+    const peer = state.peers[peerId];
     
-    if(data.type === 'req_pvt') {
-        logSys(`<b>${p.username}</b> wants Private Chat.<br>
-            <button class="action-btn" onclick="acceptPvt('${id}')">Accept</button>
-            <button class="action-btn reject" onclick="logSys('Declined.')">Decline</button>`);
-        playAudio();
+    // Name Update
+    if (data.type === 'name') { peer.username = data.name; return; }
+
+    // Chat Routing
+    // If msg is private, chatId = peerId. If global, chatId = 'global'.
+    const chatId = data.isPrivate ? peerId : 'global';
+    
+    // Notification for Private Msg while in Global
+    if (data.isPrivate && state.activeChat !== peerId) {
+        logSystem(`Private message from <b>${peer.username}</b>. <u onclick="startPrivate('${peerId}')" style="cursor:pointer;color:var(--accent)">Reply</u>`);
     }
-    else if(data.type === 'acc_pvt') {
-        startPrivate(id);
-        logSys(`Private chat with ${p.username} started.`);
-    }
-    else if(data.type === 'chat') {
-        const dest = data.isPvt ? id : 'global';
-        storeMsg(dest, { user: p.username, txt: data.txt, type: 'peer', pid: id });
-        if(state.activeChat === dest) renderMsgs(dest);
-        else if(data.isPvt) { logSys(`Private msg from <b>${p.username}</b>.`); playAudio(); }
-        else if(state.activeChat === 'global') playAudio(); // Sound for global if looking at global
-    }
-    else if(data.type === 'name_sync') { p.username = data.name; updateCount(); }
-    else if(data.type === 'file_start') {
+
+    if (data.type === 'chat') {
+        storeMsg(chatId, { sender: peer.username, text: data.text, type: 'peer', peerId: peerId });
+    } else if (data.type === 'file_start') {
         // Init download
-        state.downloads[data.fid] = { 
-            chunks:[], total:data.total, count:0, 
-            meta:data, sender:p.username, chatId: (data.isPvt?id:'global') 
-        };
-        const msg = { user: p.username, type:'peer', isFile:true, meta:data, pid:id };
-        storeMsg(state.downloads[data.fid].chatId, msg);
-        if(state.activeChat === state.downloads[data.fid].chatId) renderMsgs(state.activeChat);
-    }
-    else if(data.type === 'file_chunk') {
-        const dl = state.downloads[data.fid];
-        if(dl) {
+        state.downloads[data.id] = { chunks: [], total: data.total, count: 0, meta: data, chatId: chatId };
+        storeMsg(chatId, { sender: peer.username, isFile: true, meta: data, type: 'peer', peerId: peerId });
+    } else if (data.type === 'file_chunk') {
+        const dl = state.downloads[data.id];
+        if (dl) {
             dl.chunks[data.idx] = data.chunk;
             dl.count++;
-            if(dl.count === dl.total) finishFile(data.fid);
+            // Update Progress Bar
+            if (state.activeChat === chatId) {
+                const el = document.getElementById(`prog-${data.id}`);
+                if (el) el.style.width = ((dl.count / dl.total) * 100) + '%';
+            }
+            // Finish
+            if (dl.count === dl.total) finishFile(data.id);
         }
     }
+
+    if (state.activeChat === chatId) renderChat();
 }
 
-function finishFile(fid) {
-    const dl = state.downloads[fid];
+function finishFile(id) {
+    const dl = state.downloads[id];
     const blob = dl.chunks.join('');
-    // Update UI if visible
-    if(state.activeChat === dl.chatId) {
-        const el = document.getElementById(`prog-${fid}`);
-        if(el) {
-            if(dl.meta.mime.startsWith('image')) el.innerHTML = `<img src="${blob}" class="chat-img" onclick="window.open(this.src)">`;
-            else el.innerHTML = `<a href="${blob}" download="${dl.meta.name}" style="color:var(--accent)">Download ${dl.meta.name}</a>`;
+    // Replace progress bar with download link/image
+    const el = document.getElementById(`file-box-${id}`);
+    if (el) {
+        if (dl.meta.type.startsWith('image/')) {
+            el.innerHTML = `<img src="${blob}" class="chat-img" onclick="window.open(this.src)">`;
+        } else {
+            el.innerHTML = `<a href="${blob}" download="${dl.meta.name}" style="color:var(--accent)">Download ${dl.meta.name}</a>`;
         }
     }
 }
 
 /* --- MESSAGING & UI --- */
-function sendMsg(e) {
+function sendMessage(e) {
     e.preventDefault();
     const inp = document.getElementById('msg-input');
-    const txt = inp.value.trim();
-    if(!txt) return;
-    
-    // UI
-    storeMsg(state.activeChat, { user:'Me', txt:txt, type:'me' });
-    renderMsgs(state.activeChat);
-    
-    // Network
-    const isPvt = state.activeChat !== 'global';
-    const payload = JSON.stringify({ type:'chat', txt:txt, isPvt });
-    
-    if(isPvt) {
+    const text = inp.value.trim();
+    if (!text) return;
+
+    storeMsg(state.activeChat, { sender: 'Me', text: text, type: 'me' });
+    renderChat();
+
+    const isPrivate = state.activeChat !== 'global';
+    const payload = JSON.stringify({ type: 'chat', text: text, isPrivate });
+
+    if (isPrivate) {
         const p = state.peers[state.activeChat];
-        if(p && p.dc) p.dc.send(payload);
+        if (p && p.dc) p.dc.send(payload);
     } else {
         Object.values(state.peers).forEach(p => p.dc.send(payload));
     }
@@ -437,117 +359,118 @@ function sendMsg(e) {
 
 function sendFile(inp) {
     const f = inp.files[0];
-    if(!f) return;
-    if(f.size > 10*1024*1024) { alert('Limit 10MB'); return; }
-    
+    if (!f) return;
+    if (f.size > 10 * 1024 * 1024) { alert('Max 10MB'); return; }
+
     const reader = new FileReader();
     reader.onload = e => {
         const raw = e.target.result;
-        const fid = crypto.randomUUID();
-        const total = Math.ceil(raw.length / CONFIG.chunkSize);
-        const isPvt = state.activeChat !== 'global';
-        const meta = { fid, name:f.name, mime:f.type, total, isPvt };
-        
-        // UI
-        storeMsg(state.activeChat, { user:'Me', type:'me', isFile:true, meta });
-        renderMsgs(state.activeChat);
-        
-        // Send Meta
-        const start = JSON.stringify({ type:'file_start', ...meta });
-        const targets = isPvt ? [state.peers[state.activeChat]] : Object.values(state.peers);
-        targets.forEach(p=>p.dc.send(start));
-        
-        // Chunk Loop
+        const id = Math.random().toString(36).substr(2, 9);
+        const total = Math.ceil(raw.length / CHUNK_SIZE);
+        const isPrivate = state.activeChat !== 'global';
+        const meta = { id, name: f.name, type: f.type, total, isPrivate };
+
+        // Local UI
+        storeMsg(state.activeChat, { sender: 'Me', isFile: true, meta: meta, type: 'me', completed: true, data: raw });
+        renderChat();
+
+        // Broadcast Start
+        const targets = isPrivate ? [state.peers[state.activeChat]] : Object.values(state.peers);
+        targets.forEach(p => p.dc.send(JSON.stringify({ type: 'file_start', ...meta })));
+
+        // Send Chunks
         let idx = 0;
-        const loop = () => {
-            if(idx >= total) {
-                // Done (Local UI update)
-                const el = document.getElementById(`prog-${fid}`);
-                if(el) el.innerHTML = "Sent.";
-                return;
-            }
-            const chunk = raw.slice(idx*CONFIG.chunkSize, (idx+1)*CONFIG.chunkSize);
-            const pld = JSON.stringify({ type:'file_chunk', fid, idx, chunk });
-            targets.forEach(p=>p.dc.send(pld));
+        const sendLoop = () => {
+            if (idx >= total) return;
+            const chunk = raw.slice(idx * CHUNK_SIZE, (idx + 1) * CHUNK_SIZE);
+            targets.forEach(p => p.dc.send(JSON.stringify({ type: 'file_chunk', id, idx, chunk })));
             idx++;
-            setTimeout(loop, 10); // Throttle
+            setTimeout(sendLoop, 10); // Throttle
         };
-        loop();
+        sendLoop();
     };
     reader.readAsDataURL(f);
-    inp.value='';
+    inp.value = '';
 }
 
 /* --- PRIVATE CHAT SYSTEM --- */
-window.reqPvt = (pid) => {
-    state.peers[pid].dc.send(JSON.stringify({ type:'req_pvt' }));
-    logSys(`Request sent to ${state.peers[pid].username}.`);
-};
-
-window.acceptPvt = (pid) => {
-    state.peers[pid].dc.send(JSON.stringify({ type:'acc_pvt' }));
-    startPrivate(pid);
-};
-
-function startPrivate(pid) {
-    state.activeChat = pid;
+window.startPrivate = (peerId) => {
+    state.activeChat = peerId;
     document.body.classList.add('private-active');
-    document.getElementById('pvt-name').innerText = state.peers[pid].username;
-    renderMsgs(pid);
-}
+    document.getElementById('pvt-username').innerText = state.peers[peerId].username;
+    renderChat();
+};
 
-function exitPrivate() {
+window.exitPrivate = () => {
     state.activeChat = 'global';
     document.body.classList.remove('private-active');
-    renderMsgs('global');
+    renderChat();
+};
+
+/* --- UI HELPERS --- */
+function storeMsg(chatId, msg) {
+    if (!state.msgs[chatId]) state.msgs[chatId] = [];
+    state.msgs[chatId].push(msg);
 }
 
-/* --- UTILS --- */
-function storeMsg(cid, m) {
-    if(!state.msgs[cid]) state.msgs[cid] = [];
-    state.msgs[cid].push(m);
-}
-
-function renderMsgs(cid) {
-    const box = document.getElementById('chat-view');
-    box.innerHTML = '';
-    const list = state.msgs[cid] || [];
-    list.forEach(m => {
+function renderChat() {
+    const view = document.getElementById('chat-view');
+    view.innerHTML = '';
+    const list = state.msgs[state.activeChat] || [];
+    
+    list.forEach(msg => {
         const div = document.createElement('div');
-        div.className = `msg ${m.type}`;
-        
-        // Name Logic
-        let nameHTML = '';
-        if(m.type === 'peer' && !m.isFile) {
-            nameHTML = `<div class="sender" onclick="reqPvt('${m.pid}')">${m.user}</div>`;
-        } else if(m.type !== 'sys' && m.type !== 'me') {
-            nameHTML = `<div class="sender">${m.user}</div>`;
+        div.className = `msg ${msg.type}`;
+
+        // Header (Sender Name)
+        let header = '';
+        if (msg.type === 'peer') {
+            header = `<div class="sender" onclick="startPrivate('${msg.peerId}')" title="Click to Private Chat">
+                ${msg.sender} ${state.activeChat === 'global' ? '<span style="font-size:0.6rem; opacity:0.7">➜ PM</span>' : ''}
+            </div>`;
         }
 
-        if(m.type === 'sys') {
-            div.innerHTML = `<div class="sys-bubble">${m.txt}</div>`;
-        } else if(m.isFile) {
-            div.innerHTML = `${nameHTML}<div class="bubble">File: ${m.meta.name}<div id="prog-${m.meta.fid}" style="font-size:0.8rem; margin-top:5px; color:var(--accent)">Transferring...</div></div>`;
+        if (msg.type === 'sys') {
+            div.innerHTML = `<div class="sys-bubble">${msg.text}</div>`;
+        } else if (msg.isFile) {
+            // File Rendering
+            if (msg.type === 'me') {
+                // Sent by me (show preview immediately)
+                const content = msg.meta.type.startsWith('image/') 
+                    ? `<img src="${msg.data}" class="chat-img">`
+                    : `<div style="padding:10px; color:#fff">Sent: ${msg.meta.name}</div>`;
+                div.innerHTML = `<div class="bubble">${content}</div>`;
+            } else {
+                // Received (Show Progress or Result)
+                div.innerHTML = `${header}<div class="bubble" id="file-box-${msg.meta.id}">
+                    <div>Receiving: ${msg.meta.name}</div>
+                    <div class="progress-bar"><div class="progress-fill" id="prog-${msg.meta.id}"></div></div>
+                </div>`;
+            }
         } else {
-            const txt = m.txt.replace(/</g,"&lt;");
-            div.innerHTML = `${nameHTML}<div class="bubble">${txt}<div class="meta">${new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</div></div>`;
+            // Text Message
+            div.innerHTML = `${header}<div class="bubble">${msg.text.replace(/</g,"&lt;")}</div>`;
         }
-        box.appendChild(div);
+        view.appendChild(div);
     });
-    box.scrollTop = box.scrollHeight;
+    view.scrollTop = view.scrollHeight;
 }
 
-function logSys(html) { storeMsg(state.activeChat, { txt:html, type:'sys' }); renderMsgs(state.activeChat); }
-function updateStatus(c) { document.getElementById('conn-dot').className = `status-dot ${c}`; }
-function updateCount() { document.getElementById('user-count').innerText = `${Object.keys(state.peers).length} Peers`; }
-function enableInput(b) { document.getElementById('msg-input').disabled = !b; document.getElementById('send-btn').disabled = !b; }
-function toggleSettings() { const m=document.getElementById('settings-modal'); m.style.display = m.style.display==='flex'?'none':'flex'; }
-function saveSettings() {
-    const n = document.getElementById('username-edit').value.trim();
-    if(n) { state.username = n; Object.values(state.peers).forEach(p=>p.dc.send(JSON.stringify({type:'name_sync',name:n}))); }
-    toggleSettings();
+function logSystem(text) {
+    storeMsg(state.activeChat, { text, type: 'sys' });
+    renderChat();
 }
-function playAudio() { if(document.getElementById('sound-toggle').checked) SOUND.play().catch(()=>{}); }
+
+function forceReconnect() {
+    logSystem("Resetting connections...");
+    Object.keys(state.peers).forEach(k => { try { state.peers[k].conn.close(); } catch(e){} delete state.peers[k]; });
+    updateCount();
+    updateDot('orange');
+    broadcastSignal('presence', { name: state.myName });
+}
+
+function updateDot(color) { document.getElementById('conn-dot').className = `status-dot ${color}`; }
+function updateCount() { document.getElementById('peer-count').innerText = `${Object.keys(state.peers).length} Peers`; }
 
 window.onload = init;
 </script>
